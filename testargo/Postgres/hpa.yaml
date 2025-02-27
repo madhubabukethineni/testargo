@@ -1,0 +1,21 @@
+apiVersion: autoScaling/v2
+kind: HorizontalPodAutoScaler
+metadata:
+  name: hpa-for-postgress
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: deployment
+    name: postgres
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+    name: cpu
+    target: 
+      type: Utilization
+      averageUtilization: 70
+
+
+
