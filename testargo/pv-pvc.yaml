@@ -1,18 +1,18 @@
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: postgres-pv-volume
-  labels:
-    app: postgres
-spec:
-  storageClassName: standard-rwo
-  capacity:
-    storage: 40Gi
-  accessModes:
-    - ReadWriteOnce
-  gcePersistentDisk:
-    pdName: postgres-disk
-    fsType: ext4
+# kind: PersistentVolume
+# apiVersion: v1
+# metadata:
+#   name: postgres-pv-volume
+#   labels:
+#     app: postgres
+# spec:
+#   storageClassName: standard-rwo
+#   capacity:
+#     storage: 40Gi
+#   accessModes:
+#     - ReadWriteOnce
+#   gcePersistentDisk:
+#     pdName: postgres-disk
+#     fsType: ext4
     
 ---
 kind: PersistentVolumeClaim
