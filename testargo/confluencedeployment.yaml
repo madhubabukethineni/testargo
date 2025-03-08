@@ -1,5 +1,6 @@
 ### below command to patch from cmd 
 ### kubectl patch svc argocd-server -n argocd --type=json -p "[{\"op\": \"replace\", \"path\": \"/spec/type\", \"value\": \"NodePort\"}]"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
