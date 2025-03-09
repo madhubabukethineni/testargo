@@ -49,6 +49,46 @@
 #   selector:
 #    app: postgres
 
+# ---
+# apiVersion: apps/v1
+# kind: StatefulSet
+# metadata:
+#   name: postgres
+# spec:
+#   serviceName: "postgres"
+#   replicas: 1  # Only one primary instance for now
+#   selector:
+#     matchLabels:
+#       app: postgres
+#   template:
+#     metadata:
+#       labels:
+#         app: postgres
+#     spec:
+#       containers:
+#         - name: postgres
+#           image: postgres:10.1
+#           imagePullPolicy: "IfNotPresent"
+#           ports:
+#             - containerPort: 5432
+#           env:
+#             - name: POSTGRES_USER
+#               value: "confluence"
+#             - name: POSTGRES_PASSWORD
+#               value: "confluencepass"
+#             - name: POSTGRES_DB
+#               value: "confluence_db"
+#             - name: PGDATA  # 👈 FIX: Ensuring PostgreSQL uses a subdirectory
+#               value: "/var/lib/postgresql/data/pgdata"
+#           volumeMounts:
+#             - mountPath: /var/lib/postgresql/data
+#               name: postgredb
+#       volumes:
+#         - name: postgredb
+#           persistentVolumeClaim:
+#             claimName: postgres-pv-claim
+
+
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -78,15 +118,22 @@ spec:
               value: "confluencepass"
             - name: POSTGRES_DB
               value: "confluence_db"
-            - name: PGDATA  # 👈 FIX: Ensuring PostgreSQL uses a subdirectory
+            - name: PGDATA
               value: "/var/lib/postgresql/data/pgdata"
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
-              name: postgredb
-      volumes:
-        - name: postgredb
-          persistentVolumeClaim:
-            claimName: postgres-pv-claim
+              name: postgredb  # 🔹 This must match `volumeClaimTemplates` name
+
+  volumeClaimTemplates:
+    - metadata:
+        name: postgredb  # 🔹 Matches `volumeMounts` name
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 40Gi
+        storageClassName: gp2  # Use the existing StorageClass in your cluster
+
             
 
 ---

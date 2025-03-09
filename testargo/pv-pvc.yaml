@@ -29,17 +29,33 @@
 #     requests:
 #       storage: 40Gi
 
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pv-claim
-  labels:
-    app: postgres
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 40Gi
-  storageClassName: ebs-csi-sc  # AWS EBS-backed StorageClass
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: postgres-pv-claim
+#   labels:
+#     app: postgres
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 40Gi
+#   storageClassName: ebs-csi-sc  # AWS EBS-backed StorageClass
+
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: postgres-pv-claim
+#   labels:
+#     app: postgres
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 40Gi
+#   storageClassName: gp2  # 🔹 Change from ebs-csi-sc to gp2
+
