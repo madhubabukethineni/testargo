@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: confluence
-        image: atlassian/confluence: 8.5.16
+        image: atlassian/confluence:8.5.16
         ports:
         - containerPort: 80
         - containerPort: 8090
