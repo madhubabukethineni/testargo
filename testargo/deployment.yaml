@@ -237,7 +237,7 @@ metadata:
 provisioner: kubernetes.io/aws-ebs
 parameters:
   fsType: ext4
-  type: gp2
+  type: gp3
 reclaimPolicy: Delete
 volumeBindingMode: Immediate  # 🔹 Changed from WaitForFirstConsumer
 
