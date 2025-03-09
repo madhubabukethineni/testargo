@@ -229,17 +229,92 @@
 
 
 
+# ---
+# apiVersion: storage.k8s.io/v1
+# kind: StorageClass
+# metadata:
+#   name: gp3
+# provisioner: kubernetes.io/aws-ebs
+# parameters:
+#   fsType: ext4
+#   type: gp3
+# reclaimPolicy: Delete
+# volumeBindingMode: Immediate  # 🔹 Changed from WaitForFirstConsumer
+
+# ---
+# apiVersion: apps/v1
+# kind: StatefulSet
+# metadata:
+#   name: postgres
+# spec:
+#   serviceName: "postgres"
+#   replicas: 1  # Only one primary instance for now
+#   selector:
+#     matchLabels:
+#       app: postgres
+#   template:
+#     metadata:
+#       labels:
+#         app: postgres
+#     spec:
+#       containers:
+#         - name: postgres
+#           image: postgres:10.1
+#           imagePullPolicy: "IfNotPresent"
+#           ports:
+#             - containerPort: 5432
+#           env:
+#             - name: POSTGRES_USER
+#               value: "confluence"
+#             - name: POSTGRES_PASSWORD
+#               value: "confluencepass"
+#             - name: POSTGRES_DB
+#               value: "confluence_db"
+#             - name: PGDATA
+#               value: "/var/lib/postgresql/data/pgdata"
+#           volumeMounts:
+#             - mountPath: /var/lib/postgresql/data
+#               name: postgredb  # 🔹 Matches `volumeClaimTemplates` name
+
+#   volumeClaimTemplates:
+#     - metadata:
+#         name: postgredb  # 🔹 Matches `volumeMounts` name
+#       spec:
+#         accessModes: ["ReadWriteOnce"]
+#         resources:
+#           requests:
+#             storage: 40Gi
+#         storageClassName: gp3  # Use the modified StorageClass
+
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: postgres
+#   labels:
+#     app: postgres
+# spec:
+#   type: NodePort
+#   ports:
+#     - port: 5432
+#       targetPort: 5432
+#       nodePort: 32000  # Static NodePort for stable external access
+#   selector:
+#     app: postgres
+
+
+
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: gp3
-provisioner: kubernetes.io/aws-ebs
+provisioner: ebs.csi.aws.com  # ✅ Fixed provisioner for AWS EBS CSI
 parameters:
   fsType: ext4
   type: gp3
 reclaimPolicy: Delete
-volumeBindingMode: Immediate  # 🔹 Changed from WaitForFirstConsumer
+volumeBindingMode: WaitForFirstConsumer  # ✅ Prevents topology mismatch issues
 
 ---
 apiVersion: apps/v1
@@ -274,17 +349,17 @@ spec:
               value: "/var/lib/postgresql/data/pgdata"
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
-              name: postgredb  # 🔹 Matches `volumeClaimTemplates` name
+              name: postgredb  # ✅ Matches `volumeClaimTemplates` name
 
   volumeClaimTemplates:
     - metadata:
-        name: postgredb  # 🔹 Matches `volumeMounts` name
+        name: postgredb  # ✅ Matches `volumeMounts` name
       spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
             storage: 40Gi
-        storageClassName: gp3  # Use the modified StorageClass
+        storageClassName: gp3  # ✅ Use the corrected StorageClass
 
 ---
 apiVersion: v1
