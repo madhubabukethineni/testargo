@@ -14,18 +14,33 @@
 #     pdName: postgres-disk
 #     fsType: ext4
     
+# ---
+# kind: PersistentVolumeClaim
+# apiVersion: v1
+# metadata:
+#   name: postgres-pv-claim
+#   labels:
+#     app: postgres
+# spec:
+#   storageClassName: standard-rwo # for GCP
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 40Gi
+
 ---
-kind: PersistentVolumeClaim
 apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
   name: postgres-pv-claim
   labels:
     app: postgres
 spec:
-  storageClassName: standard-rwo
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 40Gi
+  storageClassName: gp2  # AWS EBS-backed StorageClass
 
