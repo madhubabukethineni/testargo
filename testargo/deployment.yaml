@@ -78,6 +78,8 @@ spec:
               value: "confluencepass"
             - name: POSTGRES_DB
               value: "confluence_db"
+            - name: PGDATA  # 👈 FIX: Ensuring PostgreSQL uses a subdirectory
+              value: "/var/lib/postgresql/data/pgdata"
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgredb
