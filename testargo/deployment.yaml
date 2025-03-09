@@ -304,17 +304,24 @@
 
 
 
----
+ # ✅ Prevents topology mismatch issues
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: gp3
-provisioner: ebs.csi.aws.com  # ✅ Fixed provisioner for AWS EBS CSI
+provisioner: ebs.csi.aws.com
 parameters:
-  fsType: ext4
   type: gp3
+  fsType: ext4
+  topologyAware: "true"  # ✅ Ensure topology awareness
+allowedTopologies:
+  - matchLabelExpressions:
+      - key: topology.kubernetes.io/zone
+        values:
+          - ap-south-1a
+          - ap-south-1b
+volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer  # ✅ Prevents topology mismatch issues
 
 ---
 apiVersion: apps/v1
