@@ -155,16 +155,91 @@
 
 
 
+# ---
+# apiVersion: storage.k8s.io/v1
+# kind: StorageClass
+# metadata:
+#   name: gp2-zonal
+# provisioner: ebs.csi.aws.com
+# parameters:
+#   type: gp2
+#   zone: ap-south-1a  # 🔹 Change this to match your node's zone
+# volumeBindingMode: WaitForFirstConsumer
+
+# ---
+# apiVersion: apps/v1
+# kind: StatefulSet
+# metadata:
+#   name: postgres
+# spec:
+#   serviceName: "postgres"
+#   replicas: 1  # Only one primary instance for now
+#   selector:
+#     matchLabels:
+#       app: postgres
+#   template:
+#     metadata:
+#       labels:
+#         app: postgres
+#     spec:
+#       containers:
+#         - name: postgres
+#           image: postgres:10.1
+#           imagePullPolicy: "IfNotPresent"
+#           ports:
+#             - containerPort: 5432
+#           env:
+#             - name: POSTGRES_USER
+#               value: "confluence"
+#             - name: POSTGRES_PASSWORD
+#               value: "confluencepass"
+#             - name: POSTGRES_DB
+#               value: "confluence_db"
+#             - name: PGDATA
+#               value: "/var/lib/postgresql/data/pgdata"
+#           volumeMounts:
+#             - mountPath: /var/lib/postgresql/data
+#               name: postgredb  # 🔹 This must match `volumeClaimTemplates` name
+
+#   volumeClaimTemplates:
+#     - metadata:
+#         name: postgredb  # 🔹 Matches `volumeMounts` name
+#       spec:
+#         accessModes: ["ReadWriteOnce"]
+#         resources:
+#           requests:
+#             storage: 40Gi
+#         storageClassName: gp2-zonal  # 🔹 Use the new StorageClass here
+
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: postgres
+#   labels:
+#     app: postgres
+# spec:
+#   type: NodePort
+#   ports:
+#     - port: 5432
+#       targetPort: 5432
+#       nodePort: 32000  # Static NodePort for stable external access
+#   selector:
+#     app: postgres
+
+
+
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: gp2-zonal
-provisioner: ebs.csi.aws.com
+  name: gp2
+provisioner: kubernetes.io/aws-ebs
 parameters:
+  fsType: ext4
   type: gp2
-  zone: ap-south-1a  # 🔹 Change this to match your node's zone
-volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+volumeBindingMode: Immediate  # 🔹 Changed from WaitForFirstConsumer
 
 ---
 apiVersion: apps/v1
@@ -199,7 +274,7 @@ spec:
               value: "/var/lib/postgresql/data/pgdata"
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
-              name: postgredb  # 🔹 This must match `volumeClaimTemplates` name
+              name: postgredb  # 🔹 Matches `volumeClaimTemplates` name
 
   volumeClaimTemplates:
     - metadata:
@@ -209,7 +284,7 @@ spec:
         resources:
           requests:
             storage: 40Gi
-        storageClassName: gp2-zonal  # 🔹 Use the new StorageClass here
+        storageClassName: gp2  # Use the modified StorageClass
 
 ---
 apiVersion: v1
