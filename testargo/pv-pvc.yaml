@@ -42,5 +42,5 @@ spec:
   resources:
     requests:
       storage: 40Gi
-  storageClassName: gp2  # AWS EBS-backed StorageClass
+  storageClassName: gp3  # AWS EBS-backed StorageClass
 
