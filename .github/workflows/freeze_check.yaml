@@ -86,12 +86,6 @@ jobs:
 
           echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
 
-      - name: Fail if code freeze is active
-        if: steps.freeze_check.outputs.blocked == 'true'
-        run: |
-          echo "❌ Code freeze is active — blocking PR"
-          exit 1
-
       - name: Report freeze check
         uses: actions/github-script@v6
         if: always()
@@ -115,3 +109,9 @@ jobs:
                 summary: summary
               }
             });
+
+      - name: Fail workflow if blocked
+        if: steps.freeze_check.outputs.blocked == 'true'
+        run: |
+          echo "❌ Code freeze is active — failing workflow"
+          exit 1
