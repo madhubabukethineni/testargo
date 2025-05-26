@@ -2,6 +2,7 @@ name: Code Freeze Check
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, reday_for_review]
     branches:
       - main
 
