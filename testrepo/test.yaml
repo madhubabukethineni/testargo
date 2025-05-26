@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: confluence-deployment
+  labels:
+    app: confluence
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: confluence
+  template:
+    metadata:
+      labels:
+        app: confluence
+    spec:
+      containers:
+      - name: confluence
+        image: atlassian/confluence:8.5.16
+        ports:
+        - containerPort: 8090
+        - containerPort: 8080
+        - containerPort: 80
+        resources:  # ✅ Added resource limits to prevent crashes
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: confluence-service
+  labels:
+    app: confluence
+spec:
+  type: NodePort
+  ports:
+  - port: 8090   # ✅ Exposing the correct port Confluence runs on
+    targetPort: 8090
+    nodePort: 32001
+    protocol: TCP
+  selector:
+    app: confluence
