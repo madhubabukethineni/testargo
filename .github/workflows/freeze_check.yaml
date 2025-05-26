@@ -51,16 +51,16 @@ jobs:
 
           FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
           ONLY_FREEZE_CHANGED=false
-          if [[ "$FILE_COUNT" -eq 1 && "$CHANGED_FILES" == ".freeze.json" ]]; then
+          if [[ "$FILE_COUNT" -eq 1 && "$CHANGED_FILES" == "freeze.json" ]]; then
             ONLY_FREEZE_CHANGED=true
           fi
-          echo "Only .freeze.json changed: $ONLY_FREEZE_CHANGED"
+          echo "Only freeze.json changed: $ONLY_FREEZE_CHANGED"
 
           PR_LABELS="${{ steps.labels.outputs.labels }}"
           echo "PR labels: $PR_LABELS"
 
           if [[ "$ONLY_FREEZE_CHANGED" == "true" ]]; then
-            echo "✅ Only .freeze.json changed — allowed"
+            echo "✅ Only freeze.json changed — allowed"
             echo "blocked=false" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -74,12 +74,12 @@ jobs:
           IS_FROZEN="false"
           START_DATE=""
           END_DATE=""
-          if [ -f ".freeze.json" ]; then
-            IS_FROZEN=$(jq -r '.freeze // "false"' .freeze.json)
-            START_DATE=$(jq -r '.start_date // ""' .freeze.json)
-            END_DATE=$(jq -r '.end_date // ""' .freeze.json)
+          if [ -f "freeze.json" ]; then
+            IS_FROZEN=$(jq -r '.freeze // "false"' freeze.json)
+            START_DATE=$(jq -r '.start_date // ""' freeze.json)
+            END_DATE=$(jq -r '.end_date // ""' freeze.json)
           else
-            echo ".freeze.json file not found"
+            echo "freeze.json file not found"
           fi
 
           NOW=$(date -u +"%Y-%m-%d")
