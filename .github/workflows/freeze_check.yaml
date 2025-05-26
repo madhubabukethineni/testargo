@@ -1,0 +1,115 @@
+name: Code Freeze Check
+
+on:
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  code-freeze-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get PR labels
+        id: labels
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const labels = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+            const labelNames = labels.data.map(label => label.name);
+            core.setOutput("labels", labelNames.join(","));
+
+      - name: Check freeze status
+        id: freeze_check
+        run: |
+          echo "🔍 Evaluating freeze conditions..."
+
+          git fetch origin ${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files: $CHANGED_FILES"
+
+          FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
+          ONLY_FREEZE_CHANGED=false
+          if [[ "$FILE_COUNT" -eq 1 && "$CHANGED_FILES" == ".freeze.json" ]]; then
+            ONLY_FREEZE_CHANGED=true
+          fi
+          echo "Only .freeze.json changed: $ONLY_FREEZE_CHANGED"
+
+          PR_LABELS="${{ steps.labels.outputs.labels }}"
+          echo "PR labels: $PR_LABELS"
+
+          if [[ "$ONLY_FREEZE_CHANGED" == "true" ]]; then
+            echo "✅ Only .freeze.json changed — allowed"
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if echo "$PR_LABELS" | grep -q "bypass-code-freeze"; then
+            echo "🛂 bypass-code-freeze label found — allowed"
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          IS_FROZEN="false"
+          START_DATE=""
+          END_DATE=""
+          if [ -f ".freeze.json" ]; then
+            IS_FROZEN=$(jq -r '.freeze // "false"' .freeze.json)
+            START_DATE=$(jq -r '.start_date // ""' .freeze.json)
+            END_DATE=$(jq -r '.end_date // ""' .freeze.json)
+          fi
+
+          NOW=$(date -u +"%Y-%m-%d")
+          echo "Now: $NOW | Freeze: $IS_FROZEN | Start: $START_DATE | End: $END_DATE"
+
+          BLOCKED="false"
+          if [[ "$IS_FROZEN" == "true" ]]; then
+            echo "🚫 Freeze is active (explicit)"
+            BLOCKED="true"
+          elif [[ "$IS_FROZEN" != "false" && -n "$START_DATE" && -n "$END_DATE" && "$NOW" > "$START_DATE" && "$NOW" < "$END_DATE" ]]; then
+            echo "🚫 Freeze is active (date-based)"
+            BLOCKED="true"
+          fi
+
+          echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
+
+      - name: Report freeze check
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const blocked = "${{ steps.freeze_check.outputs.blocked }}" === 'true';
+            const conclusion = blocked ? 'failure' : 'success';
+            const summary = blocked
+              ? '🚫 Code freeze active — PR blocked.'
+              : '✅ No active freeze — PR allowed.';
+
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Code Freeze Check',
+              head_sha: context.payload.pull_request.head.sha,
+              status: 'completed',
+              conclusion: conclusion,
+              output: {
+                title: 'Code Freeze Status',
+                summary: summary
+              }
+            });
+
+            if (blocked) {
+              core.setFailed('PR blocked due to active code freeze.');
+            }
