@@ -2,7 +2,7 @@ name: Code Freeze Check
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, reday_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
 
@@ -36,6 +36,7 @@ jobs:
       - name: Check freeze status
         id: freeze_check
         run: |
+          set -euxo pipefail
           echo "🔍 Evaluating freeze conditions..."
 
           git fetch origin ${{ github.base_ref }}
@@ -87,8 +88,36 @@ jobs:
 
           echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
 
+      # Debug output to check what the blocked output really is
+      - name: Debug blocked output
+        run: echo "blocked=${{ steps.freeze_check.outputs.blocked }}"
+
+      - name: Report freeze check
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const blocked = "${{ steps.freeze_check.outputs.blocked }}".trim().toLowerCase() === 'true';
+            const conclusion = blocked ? 'failure' : 'success';
+            const summary = blocked
+              ? '🚫 Code freeze active — PR blocked.'
+              : '✅ No active freeze — PR allowed.';
+
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Code Freeze Check',
+              head_sha: context.payload.pull_request.head.sha,
+              status: 'completed',
+              conclusion: conclusion,
+              output: {
+                title: 'Code Freeze Status',
+                summary: summary
+              }
+            });
+
       - name: Fail workflow if blocked
-        if: steps.freeze_check.outputs.blocked == 'true'
+        if: ${{ steps.freeze_check.outputs.blocked && steps.freeze_check.outputs.blocked == 'true' }}
         run: |
           echo "❌ Code freeze is active — failing workflow"
           exit 1
