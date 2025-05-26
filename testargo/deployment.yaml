@@ -1,5 +1,6 @@
 ## delete after testing
-
+## apiVersion: apps/v1
+# kind: Deployment
 ## 5GcBipbONhyS1nce  ( This is argocd intitial password)
 # apiVersion: apps/v1
 # kind: Deployment
