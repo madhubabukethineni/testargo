@@ -2,9 +2,9 @@ name: Code Freeze Check
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   code-freeze-check:
@@ -39,6 +39,12 @@ jobs:
           set -euxo pipefail
           echo "🔍 Evaluating freeze conditions..."
 
+          # Ensure jq is installed (should be on ubuntu-latest, but just in case)
+          if ! command -v jq &> /dev/null; then
+            echo "jq not found, installing..."
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
           git fetch origin ${{ github.base_ref }}
           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
           echo "Changed files: $CHANGED_FILES"
@@ -55,13 +61,13 @@ jobs:
 
           if [[ "$ONLY_FREEZE_CHANGED" == "true" ]]; then
             echo "✅ Only .freeze.json changed — allowed"
-            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            echo "blocked=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           if echo "$PR_LABELS" | grep -q "bypass-code-freeze"; then
             echo "🛂 bypass-code-freeze label found — allowed"
-            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            echo "blocked=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -72,6 +78,8 @@ jobs:
             IS_FROZEN=$(jq -r '.freeze // "false"' .freeze.json)
             START_DATE=$(jq -r '.start_date // ""' .freeze.json)
             END_DATE=$(jq -r '.end_date // ""' .freeze.json)
+          else
+            echo ".freeze.json file not found"
           fi
 
           NOW=$(date -u +"%Y-%m-%d")
@@ -86,18 +94,14 @@ jobs:
             BLOCKED="true"
           fi
 
-          echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
-
-      # Debug output to check what the blocked output really is
-      - name: Debug blocked output
-        run: echo "blocked=${{ steps.freeze_check.outputs.blocked }}"
+          echo "blocked=$BLOCKED" >> $GITHUB_OUTPUT
 
       - name: Report freeze check
         uses: actions/github-script@v6
         if: always()
         with:
           script: |
-            const blocked = "${{ steps.freeze_check.outputs.blocked }}".trim().toLowerCase() === 'true';
+            const blocked = "${{ steps.freeze_check.outputs.blocked }}" === 'true';
             const conclusion = blocked ? 'failure' : 'success';
             const summary = blocked
               ? '🚫 Code freeze active — PR blocked.'
@@ -117,7 +121,7 @@ jobs:
             });
 
       - name: Fail workflow if blocked
-        if: ${{ steps.freeze_check.outputs.blocked && steps.freeze_check.outputs.blocked == 'true' }}
+        if: ${{ steps.freeze_check.outputs.blocked == 'true' }}
         run: |
           echo "❌ Code freeze is active — failing workflow"
           exit 1
