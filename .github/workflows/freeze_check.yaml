@@ -12,7 +12,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      checks: write
 
     steps:
       - name: Checkout code
@@ -39,7 +38,6 @@ jobs:
           set -euxo pipefail
           echo "🔍 Evaluating freeze conditions..."
 
-          # Ensure jq is installed (should be on ubuntu-latest, but just in case)
           if ! command -v jq &> /dev/null; then
             echo "jq not found, installing..."
             sudo apt-get update && sudo apt-get install -y jq
@@ -60,13 +58,13 @@ jobs:
           echo "PR labels: $PR_LABELS"
 
           if [[ "$ONLY_FREEZE_CHANGED" == "true" ]]; then
-            echo "✅ Only freeze.json changed — allowed"
+            echo "✅ Only freeze.json changed — allowed" >> $GITHUB_STEP_SUMMARY
             echo "blocked=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           if echo "$PR_LABELS" | grep -q "bypass-code-freeze"; then
-            echo "🛂 bypass-code-freeze label found — allowed"
+            echo "🛂 bypass-code-freeze label found — allowed" >> $GITHUB_STEP_SUMMARY
             echo "blocked=false" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -87,38 +85,16 @@ jobs:
 
           BLOCKED="false"
           if [[ "$IS_FROZEN" == "true" ]]; then
-            echo "🚫 Freeze is active (explicit)"
+            echo "🚫 Freeze is active (explicit)" >> $GITHUB_STEP_SUMMARY
             BLOCKED="true"
           elif [[ "$IS_FROZEN" != "false" && -n "$START_DATE" && -n "$END_DATE" && "$NOW" > "$START_DATE" && "$NOW" < "$END_DATE" ]]; then
-            echo "🚫 Freeze is active (date-based)"
+            echo "🚫 Freeze is active (date-based)" >> $GITHUB_STEP_SUMMARY
             BLOCKED="true"
+          else
+            echo "✅ No active freeze — PR allowed" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "blocked=$BLOCKED" >> $GITHUB_OUTPUT
-
-      - name: Report freeze check
-        uses: actions/github-script@v6
-        if: always()
-        with:
-          script: |
-            const blocked = "${{ steps.freeze_check.outputs.blocked }}" === 'true';
-            const conclusion = blocked ? 'failure' : 'success';
-            const summary = blocked
-              ? '🚫 Code freeze active — PR blocked.'
-              : '✅ No active freeze — PR allowed.';
-
-            await github.rest.checks.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'Code Freeze Check',
-              head_sha: context.payload.pull_request.head.sha,
-              status: 'completed',
-              conclusion: conclusion,
-              output: {
-                title: 'Code Freeze Status',
-                summary: summary
-              }
-            });
 
       - name: Fail workflow if blocked
         if: ${{ steps.freeze_check.outputs.blocked == 'true' }}
