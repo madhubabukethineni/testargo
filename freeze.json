@@ -1,5 +1,5 @@
 {
-  "freeze": false,
+  "freeze": true,
   "start_date": "2025-05-29",
   "end_date": "2025-06-01"
 }
